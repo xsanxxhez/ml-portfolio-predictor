@@ -1,29 +1,31 @@
 """
 Portfolio optimization using Modern Portfolio Theory
-Uses your covariance matrix approach!
+Fixed to use ONLY training data (no lookahead bias)
 """
 import pandas as pd
 import numpy as np
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
+import seaborn as sns
 import os
 
 DATA_DIR = 'data/raw'
 RESULTS_DIR = 'results'
 
 def load_portfolio_data(tickers):
-    """Load returns for all stocks"""
+    """Load returns for all stocks (TRAINING DATA ONLY)"""
     returns_df = pd.DataFrame()
 
     for ticker in tickers:
         df = pd.read_csv(f"{DATA_DIR}/{ticker}.csv", index_col=0, parse_dates=True)
 
-        # ===== FIX: Convert to numeric =====
-        df['Close'] = pd.to_numeric(df['Close'], errors='coerce')
-        df = df.dropna(subset=['Close'])
+        # ===== FIX: Use only training data (80%) =====
+        train_size = int(len(df) * 0.8)
+        df_train = df[:train_size]
         # ===== END FIX =====
 
-        returns_df[ticker] = df['Close'].pct_change()
+        returns = df_train['Close'].pct_change()
+        returns_df[ticker] = returns
 
     returns_df = returns_df.dropna()
     return returns_df
@@ -32,7 +34,6 @@ def load_portfolio_data(tickers):
 def calculate_portfolio_metrics(weights, mean_returns, cov_matrix):
     """
     Calculate portfolio return and risk
-    This is YOUR math from earlier!
     """
     # Portfolio return: w^T * r
     portfolio_return = np.dot(weights, mean_returns)
@@ -122,13 +123,13 @@ def generate_efficient_frontier(mean_returns, cov_matrix, num_portfolios=5000):
 def analyze_portfolio(tickers):
     """Main portfolio analysis"""
     print("="*60)
-    print("PORTFOLIO OPTIMIZATION")
+    print("PORTFOLIO OPTIMIZATION (TRAINING DATA ONLY)")
     print("="*60)
     print(f"Analyzing: {', '.join(tickers)}\n")
 
     # Load data
     returns_df = load_portfolio_data(tickers)
-    print(f"Data: {returns_df.shape[0]} days")
+    print(f"Data: {returns_df.shape[0]} days (80% of full dataset)")
 
     # Calculate statistics
     mean_returns = returns_df.mean()
@@ -197,7 +198,7 @@ def analyze_portfolio(tickers):
 
     plt.xlabel('Annual Volatility (Risk)')
     plt.ylabel('Annual Return')
-    plt.title('Efficient Frontier: Risk vs Return')
+    plt.title('Efficient Frontier: Risk vs Return (Training Data)')
     plt.legend()
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
@@ -219,11 +220,10 @@ def analyze_portfolio(tickers):
     print(f"✓ Saved: {RESULTS_DIR}/optimal_weights.png")
 
     # Plot 3: Correlation Heatmap
-    import seaborn as sns
     plt.figure(figsize=(10, 8))
     sns.heatmap(corr_matrix, annot=True, fmt='.2f', cmap='coolwarm',
                 center=0, square=True, linewidths=1)
-    plt.title('Stock Correlation Matrix')
+    plt.title('Stock Correlation Matrix (Training Data)')
     plt.tight_layout()
     plt.savefig(f"{RESULTS_DIR}/correlation_heatmap.png", dpi=150)
     print(f"✓ Saved: {RESULTS_DIR}/correlation_heatmap.png")

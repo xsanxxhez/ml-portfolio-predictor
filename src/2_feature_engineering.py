@@ -15,8 +15,8 @@ def calculate_returns(df):
     return df
 
 def calculate_technical_indicators(df):
-    """Add technical indicators"""
-    close = df['Close']
+    """Add technical indicators (NO LOOKAHEAD BIAS)"""
+    close = df['Close'].shift(1)  # ✅ Use yesterday's close!
 
     # Moving averages
     df['SMA_10'] = close.rolling(window=10).mean()
@@ -30,7 +30,7 @@ def calculate_technical_indicators(df):
     df['MACD_signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
     df['MACD_hist'] = df['MACD'] - df['MACD_signal']
 
-    # RSI
+    # RSI (use shifted close)
     delta = close.diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
@@ -44,25 +44,28 @@ def calculate_technical_indicators(df):
     df['BB_lower'] = df['BB_middle'] - (2 * bb_std)
     df['BB_width'] = (df['BB_upper'] - df['BB_lower']) / df['BB_middle']
 
-    # Volatility
-    df['volatility_10'] = df['returns'].rolling(10).std()
-    df['volatility_20'] = df['returns'].rolling(20).std()
+    # Volatility (use past returns only)
+    returns = df['returns'].shift(1)  # ✅ Yesterday's return
+    df['volatility_10'] = returns.rolling(10).std()
+    df['volatility_20'] = returns.rolling(20).std()
     df['volatility_annual'] = df['volatility_20'] * np.sqrt(252)
 
-    # Volume features
-    df['volume_sma_20'] = df['Volume'].rolling(20).mean()
-    df['volume_ratio'] = df['Volume'] / df['volume_sma_20']
+    # Volume features (use shifted volume)
+    volume = df['Volume'].shift(1)  # ✅ Yesterday's volume
+    df['volume_sma_20'] = volume.rolling(20).mean()
+    df['volume_ratio'] = volume / df['volume_sma_20']
 
-    # Price momentum
+    # Price momentum (use shifted prices)
     df['momentum_5'] = close / close.shift(5) - 1
     df['momentum_10'] = close / close.shift(10) - 1
     df['momentum_20'] = close / close.shift(20) - 1
 
-    # Lagged returns
+    # Lagged returns (already shifted, but add +1 more)
     for lag in [1, 2, 3, 5, 10]:
-        df[f'return_lag_{lag}'] = df['returns'].shift(lag)
+        df[f'return_lag_{lag}'] = df['returns'].shift(lag + 1)  # ✅ Extra shift
 
     return df
+
 
 def create_target(df, horizon=1):
     """Create target variable: 1 if price goes up, 0 if down"""

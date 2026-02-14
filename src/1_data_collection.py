@@ -1,13 +1,13 @@
 """
 Download historical stock data for portfolio
+Fixed to save clean single-level CSV files
 """
 import yfinance as yf
 import pandas as pd
 import os
-from datetime import datetime
 
 # Configuration
-TICKERS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN'] # 5 tech stocks
+TICKERS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN']
 START_DATE = '2015-01-01'
 END_DATE = '2024-01-01'
 DATA_DIR = 'data/raw'
@@ -20,13 +20,19 @@ def download_stock_data(tickers, start, end):
 
     for ticker in tickers:
         print(f"Downloading {ticker}...")
-        df = yf.download(ticker, start=start, end=end, progress=False)
+
+        # Use Ticker object instead of download() to avoid multi-index
+        stock = yf.Ticker(ticker)
+        df = stock.history(start=start, end=end)
 
         if df.empty:
             print(f"Warning: No data for {ticker}")
             continue
 
-        # Save individual stock
+        # Keep only OHLCV columns (drops Dividends, Stock Splits)
+        df = df[['Open', 'High', 'Low', 'Close', 'Volume']]
+
+        # Save with Date as index (clean single-level CSV)
         df.to_csv(f"{DATA_DIR}/{ticker}.csv")
         all_data[ticker] = df
 
