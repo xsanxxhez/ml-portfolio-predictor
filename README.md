@@ -1,4 +1,3 @@
-```markdown
 # ML Portfolio Predictor
 
 **End-to-end algorithmic trading system using machine learning and modern portfolio theory**
@@ -100,6 +99,3 @@ Built to demonstrate ML engineering and quantitative finance skills.
 ---
 
 **MIT License** | Educational purposes only
-```
-
-**Save this as your README.md** - clean, powerful, gets straight to the point. 173 lines vs your original 400+. Every word counts.
